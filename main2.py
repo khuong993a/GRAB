@@ -295,19 +295,19 @@ def farm_points(account, proxy):
 
 
 def main():
-    """Main function to run the farming process."""
-    accounts = load_data(ACCOUNTS_FILE)
-    proxies = load_data(PROXIES_FILE)
+    """Main function to run the farming process.""" 
+    accounts = load_data(ACCOUNTS_FILE) 
+    proxies = load_data(PROXIES_FILE) 
 
-    logging.info(f"Loaded {len(accounts)} accounts and {len(proxies)} proxies")
-    logging.info(f"NUM_THREADS set to {NUM_THREADS}")
+    logging.info(f"Loaded {len(accounts)} accounts and {len(proxies)} proxies") 
+    logging.info(f"NUM_THREADS set to {NUM_THREADS}") 
 
-    threads = []
+    threads = [] 
     for i in range(min(NUM_THREADS, len(accounts), len(proxies))):
         username = accounts[i].split(':')[0]
-        logging.info(f"Starting thread for account: {username}")
-        thread = threading.Thread(target=farm_points, args=(accounts[i], proxies[i]))
-        threads.append(thread)
+        logging.info(f"Starting thread for account: {username}") 
+        thread = threading.Thread(target=farm_points, args=(accounts[i], proxies[i])) 
+        threads.append(thread) 
         thread.start()
 
     logging.info(f"Started {len(threads)} threads")
@@ -316,7 +316,6 @@ def main():
         thread.join()
 
     logging.info("All threads completed")
-
 
 if __name__ == "__main__":
     main()
