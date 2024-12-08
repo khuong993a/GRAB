@@ -28,7 +28,7 @@ NUM_THREADS = config['num_threads']
 ACCOUNTS_FILE = config['accounts_file']
 PROXIES_FILE = config['proxies_file']
 SESSION_INTERVAL = config['session_interval']
-EXTENSION_PATH = './extension/caacbgbklghmpodbdafajbgdnegacfmo/1.0.14_0/'
+EXTENSION_PATH = './extension/caacbgbklghmpodbdafajbgdnegacfmo/1.0.14_0/'  # Ensure this path is correct
 
 def load_data(filename):
     try:
@@ -53,6 +53,7 @@ def setup_driver(proxy):
         'no_proxy': ''
     }
 
+    # Chrome options for headless mode
     chrome_options.add_argument('--ignore-certificate-errors')
     chrome_options.add_argument('--ignore-ssl-errors')
     chrome_options.add_argument('--headless')
@@ -67,6 +68,7 @@ def setup_driver(proxy):
 
     try:
         driver = uc.Chrome(seleniumwire_options=proxy_options, options=chrome_options, user_data_dir=user_data_dir)
+        logging.info("Driver setup successfully.")
         return driver
     except Exception as e:
         logging.error(f"Error setting up driver: {str(e)}")
