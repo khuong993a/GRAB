@@ -8,7 +8,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
 import logging
 import tempfile
-import seleniumwire.undetected_chromedriver as uc
+import seleniumwire.undetected_chromedriver.v2 as uc
 from selenium.webdriver.common.by import By
 
 # Настройка логирования
@@ -39,6 +39,11 @@ def load_data(filename):
 
 def setup_driver():
     chrome_options = uc.ChromeOptions()
+    
+    # Đảm bảo chỉ định đường dẫn đến Chromium binary
+    chrome_path = '/path/to/chromium'  # Đảm bảo đường dẫn này đúng
+    chrome_options.binary_location = chrome_path
+    
     chrome_options.add_argument('--ignore-certificate-errors')
     chrome_options.add_argument('--ignore-ssl-errors')
     chrome_options.add_argument('--headless')
