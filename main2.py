@@ -12,7 +12,7 @@ import seleniumwire.undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
 
 # Настройка логирования
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 logging.getLogger('seleniumwire').disabled = True
 logging.getLogger('seleniumwire').setLevel(logging.ERROR)
 
@@ -115,7 +115,7 @@ def login_to_extension(driver, username, password):
         logging.info("Extension page loaded")
 
         while len(driver.window_handles) < 2:
-            pass
+            time.sleep(1)
         logging.info("Second tab opened")
 
         driver.switch_to.window(driver.window_handles[-1])
@@ -242,6 +242,13 @@ def maintain_session(driver, username):
                 logging.error(f"[{username}] Max session maintenance attempts reached. Giving up.")
 
 
+def run_session_maintenance(driver, interval, username):
+    """Run session maintenance in a separate thread."""
+    while True:
+        maintain_session(driver, username)
+        time.sleep(interval)
+
+
 def farm_points(account, proxy):
     """Main function to log in and farm points."""
     username, password = account.split(':')
@@ -251,35 +258,46 @@ def farm_points(account, proxy):
 
     while login_attempts < MAX_LOGIN_ATTEMPTS:
         try:
-            if driver:
-                driver.quit()  # Close the previous driver if it exists
-
             driver = setup_driver(proxy)
+            logging.info(f"[{username}] Driver set up successfully")
 
             if login_to_extension(driver, username, password):
-                logging.info(f"[{username}] Successfully logged in.")
-                
-                # Before using `max()`, ensure there is data to work with
-                points_list = []  # Replace this with actual list
-                if points_list:
-                    max_points = max(points_list)
-                    logging.info(f"Max points: {max_points}")
-                else:
-                    logging.info("Points list is empty. Cannot find max.")
-                
-                maintain_session(driver, username)
-                driver.quit()
-                break
+                logging.info(f"[{username}] Login successful")
+
+                # Start session maintenance in a separate thread
+                maintenance_thread = threading.Thread(target=run_session_maintenance, args=(driver, SESSION_INTERVAL, username))
+                maintenance_thread.start()
+
+                # Keep the main thread running
+                maintenance_thread.join()
             else:
+                logging.error(f"[{username}] Login failed, retrying...")
                 login_attempts += 1
-                logging.error(f"[{username}] Login attempt {login_attempts} failed.")
                 time.sleep(LOGIN_RETRY_DELAY)
 
         except Exception as e:
-            login_attempts += 1
-            logging.error(f"[{username}] Error occurred (Attempt {login_attempts}/{MAX_LOGIN_ATTEMPTS}): {str(e)}")
-            time.sleep(LOGIN_RETRY_DELAY)
-
-        finally:
+            logging.error(f"[{username}] Unexpected error during login (Attempt {login_attempts}/{MAX_LOGIN_ATTEMPTS}): {str(e)}")
             if driver:
                 driver.quit()
+            time.sleep(LOGIN_RETRY_DELAY)
+
+
+def main():
+    """Main entry point of the script."""
+    accounts = load_data(ACCOUNTS_FILE)
+    proxies = load_data(PROXIES_FILE)
+
+    threads = []
+    for i in range(NUM_THREADS):
+        account = accounts[i % len(accounts)]
+        proxy = random.choice(proxies)
+        thread = threading.Thread(target=farm_points, args=(account, proxy))
+        threads.append(thread)
+        thread.start()
+
+    for thread in threads:
+        thread.join()
+
+
+if __name__ == "__main__":
+    main()
