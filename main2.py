@@ -26,7 +26,6 @@ MAX_LOGIN_ATTEMPTS = 5
 LOGIN_RETRY_DELAY = 10
 NUM_THREADS = config['num_threads']
 ACCOUNTS_FILE = config['accounts_file']
-PROXIES_FILE = config['proxies_file']
 SESSION_INTERVAL = config['session_interval']
 EXTENSION_PATH = './extension/caacbgbklghmpodbdafajbgdnegacfmo/1.0.14_0/'
 
@@ -38,21 +37,8 @@ def load_data(filename):
         logging.error(f"Error loading file {filename}: {str(e)}")
         return []
 
-def setup_driver(proxy):
+def setup_driver():
     chrome_options = uc.ChromeOptions()
-    proxy_options = {
-        "proxy": {
-            "http": proxy,
-            "https": proxy,
-        },
-        'disable_encoding': True,
-        'suppress_connection_errors': True,
-        'verify_ssl': False,
-        'connection_timeout': None,
-        'connection_keep_alive': True,
-        'no_proxy': ''
-    }
-
     chrome_options.add_argument('--ignore-certificate-errors')
     chrome_options.add_argument('--ignore-ssl-errors')
     chrome_options.add_argument('--headless')
@@ -63,14 +49,10 @@ def setup_driver(proxy):
     chrome_options.add_argument(f'user-agent={UserAgent().random}')
     chrome_options.add_argument('--disable-blink-features=AutomationControlled')
 
-    # Đảm bảo đường dẫn tới Chrome là chính xác
-    chrome_binary_path = '/usr/bin/google-chrome'  # Hoặc đường dẫn chính xác khác
-    chrome_options.binary_location = chrome_binary_path
-
     user_data_dir = tempfile.mkdtemp()
 
     try:
-        driver = uc.Chrome(seleniumwire_options=proxy_options, options=chrome_options, user_data_dir=user_data_dir)
+        driver = uc.Chrome(options=chrome_options, user_data_dir=user_data_dir)
         return driver
     except Exception as e:
         logging.error(f"Error setting up driver: {str(e)}")
@@ -165,21 +147,20 @@ def maintain_session(driver, username):
             if attempts < MAX_MAINTENANCE_ATTEMPTS:
                 time.sleep(MAINTENANCE_RETRY_DELAY)
 
-def farm_points(account, proxy):
+def farm_points(account):
     username, password = account.split(':')
     driver = None
     login_attempts = 0
 
     while login_attempts < MAX_LOGIN_ATTEMPTS:
-        driver = setup_driver(proxy)
+        driver = setup_driver()
         if not driver:
             break
 
         if login_to_extension(driver, username, password):
-            # Thực hiện maintain session trong background thread
-            threading.Thread(target=maintain_session, args=(driver, username), daemon=True).start()
+            threading.Thread(target=maintain_session, args=(driver, username)).start()
             while True:
-                time.sleep(SESSION_INTERVAL)  # Chờ trong khoảng thời gian đã định
+                time.sleep(60)
         else:
             login_attempts += 1
             time.sleep(LOGIN_RETRY_DELAY)
@@ -187,11 +168,10 @@ def farm_points(account, proxy):
 
 def main():
     accounts = load_data(ACCOUNTS_FILE)
-    proxies = load_data(PROXIES_FILE)
     threads = []
 
-    for i in range(min(NUM_THREADS, len(accounts), len(proxies))):
-        thread = threading.Thread(target=farm_points, args=(accounts[i], proxies[i]))
+    for i in range(min(NUM_THREADS, len(accounts))):
+        thread = threading.Thread(target=farm_points, args=(accounts[i],))
         threads.append(thread)
         thread.start()
 
