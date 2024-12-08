@@ -8,7 +8,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
 import logging
 import tempfile
-import seleniumwire.undetected_chromedriver.v2 as uc
+import seleniumwire.undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
 
 # Настройка логирования
@@ -39,11 +39,6 @@ def load_data(filename):
 
 def setup_driver():
     chrome_options = uc.ChromeOptions()
-    
-    # Đảm bảo chỉ định đường dẫn đến Chromium binary
-    chrome_path = '/path/to/chromium'  # Đảm bảo đường dẫn này đúng
-    chrome_options.binary_location = chrome_path
-    
     chrome_options.add_argument('--ignore-certificate-errors')
     chrome_options.add_argument('--ignore-ssl-errors')
     chrome_options.add_argument('--headless')
@@ -53,6 +48,10 @@ def setup_driver():
     chrome_options.add_argument(f'--load-extension={EXTENSION_PATH}')
     chrome_options.add_argument(f'user-agent={UserAgent().random}')
     chrome_options.add_argument('--disable-blink-features=AutomationControlled')
+
+    # Chỉ định đường dẫn tới trình duyệt Chromium
+    chrome_path = '/data/data/com.termux/files/usr/bin/chromium'  # Đảm bảo đường dẫn đúng
+    chrome_options.binary_location = chrome_path  # Đảm bảo chỉ định đường dẫn này
 
     user_data_dir = tempfile.mkdtemp()
 
