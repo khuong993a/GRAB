@@ -174,7 +174,7 @@ def farm_points(account, proxy):
         if login_to_extension(driver, username, password):
             threading.Thread(target=maintain_session, args=(driver, username)).start()
             while True:
-                time.sleep(60)
+                time.sleep(SESSION_INTERVAL)  # Adjust the interval as necessary
         else:
             login_attempts += 1
             time.sleep(LOGIN_RETRY_DELAY)
@@ -185,6 +185,7 @@ def main():
     proxies = load_data(PROXIES_FILE)
     threads = []
 
+    # Ensure that each account is paired with a proxy
     for i in range(min(NUM_THREADS, len(accounts), len(proxies))):
         thread = threading.Thread(target=farm_points, args=(accounts[i], proxies[i]))
         threads.append(thread)
