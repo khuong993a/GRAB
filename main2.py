@@ -8,6 +8,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
 import logging
 import tempfile
+import os
 import seleniumwire.undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
 
@@ -62,7 +63,14 @@ def setup_driver(proxy):
     chrome_options.add_argument(f'user-agent={UserAgent().random}')
     chrome_options.add_argument('--disable-blink-features=AutomationControlled')
 
+    # Create user data directory and ensure it's not empty
     user_data_dir = tempfile.mkdtemp()
+
+    # Check if the directory is empty, and create a dummy file if necessary
+    if not os.listdir(user_data_dir):
+        dummy_file = os.path.join(user_data_dir, 'dummy.txt')
+        with open(dummy_file, 'w') as f:
+            f.write("dummy")
 
     driver = uc.Chrome(seleniumwire_options=proxy_options, options=chrome_options, user_data_dir=user_data_dir,
                        user_multi_procs=True, use_subprocess=True)
@@ -281,32 +289,26 @@ def worker_thread(username, password, proxy):
     # Поддерживать сессию
     maintain_session(driver, username)
 
-    # Дождаться интервала перед завершением сессии
-    time.sleep(SESSION_INTERVAL)
-
-    # Завершить сессию и закрыть драйвер
     driver.quit()
-    logging.info(f"[{username}] Session completed")
 
 
 def main():
-    accounts = load_data(ACCOUNTS_FILE)
+    # Загрузка данных
     proxies = load_data(PROXIES_FILE)
+    accounts = load_data(ACCOUNTS_FILE)
 
     threads = []
     for account in accounts:
         username, password = account.split(':')
-        for proxy in proxies:
-            thread = threading.Thread(target=worker_thread, args=(username, password, proxy))
-            thread.start()
-            threads.append(thread)
+        proxy = random.choice(proxies)
+        thread = threading.Thread(target=worker_thread, args=(username, password, proxy))
+        thread.start()
+        threads.append(thread)
+        time.sleep(SESSION_INTERVAL)
 
-            # Ограничение на количество активных потоков
-            if threading.active_count() >= NUM_THREADS:
-                for t in threads:
-                    t.join()
-                threads = []
+    for thread in threads:
+        thread.join()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
