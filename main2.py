@@ -258,6 +258,15 @@ def farm_points(account, proxy):
 
             if login_to_extension(driver, username, password):
                 logging.info(f"[{username}] Successfully logged in.")
+                
+                # Before using `max()`, ensure there is data to work with
+                points_list = []  # Replace this with actual list
+                if points_list:
+                    max_points = max(points_list)
+                    logging.info(f"Max points: {max_points}")
+                else:
+                    logging.info("Points list is empty. Cannot find max.")
+                
                 maintain_session(driver, username)
                 driver.quit()
                 break
@@ -274,26 +283,3 @@ def farm_points(account, proxy):
         finally:
             if driver:
                 driver.quit()
-
-
-def main():
-    """Main function to start farming with multiple threads."""
-    accounts = load_data(ACCOUNTS_FILE)
-    proxies = load_data(PROXIES_FILE)
-
-    logging.info(f"Loaded {len(accounts)} accounts and {len(proxies)} proxies")
-    logging.info(f"NUM_THREADS set to {NUM_THREADS}")
-
-    threads = []
-    for i in range(NUM_THREADS):
-        account = accounts[i % len(accounts)]
-        proxy = proxies[i % len(proxies)]
-        thread = threading.Thread(target=farm_points, args=(account, proxy))
-        thread.start()
-        threads.append(thread)
-
-    for thread in threads:
-        thread.join()
-
-if __name__ == "__main__":
-    main()
