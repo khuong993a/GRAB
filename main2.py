@@ -33,8 +33,15 @@ EXTENSION_PATH = './extension/caacbgbklghmpodbdafajbgdnegacfmo/1.0.14_0/'
 
 def load_data(filename):
     """Load data from a file (e.g., accounts or proxies)."""
-    with open(filename, 'r') as f:
-        return [line.strip() for line in f]
+    try:
+        with open(filename, 'r') as f:
+            data = [line.strip() for line in f if line.strip()]
+        if not data:
+            logging.error(f"{filename} is empty!")
+        return data
+    except Exception as e:
+        logging.error(f"Error loading file {filename}: {str(e)}")
+        return []
 
 
 def setup_driver(proxy):
@@ -243,37 +250,37 @@ def maintain_session(driver, username):
 
 
 def run_session_maintenance(driver, interval, username):
-    """Run session maintenance in a separate thread."""
+    """Run session maintenance in a separate thread.""" 
     while True:
         maintain_session(driver, username)
         time.sleep(interval)
 
 
 def farm_points(account, proxy):
-    """Main function to log in and farm points."""
+    """Main function to log in and farm points.""" 
     username, password = account.split(':')
-    logging.info(f"[{username}] Starting farm_points function")
-    driver = None
+    logging.info(f"[{username}] Starting farm_points function") 
+    driver = None 
     login_attempts = 0
 
     while login_attempts < MAX_LOGIN_ATTEMPTS:
         try:
-            if driver:
+            if driver: 
                 driver.quit()  # Close the previous driver if it exists
 
             driver = setup_driver(proxy)
 
-            if login_to_extension(driver, username, password):
+            if login_to_extension(driver, username, password): 
                 logging.info(f"[{username}] Successfully logged in")
 
-                # Start session maintenance in a separate thread
-                maintenance_thread = threading.Thread(target=run_session_maintenance, args=(driver, SESSION_INTERVAL, username))
-                maintenance_thread.daemon = True  # Thread will end when the main thread ends
+                # Start session maintenance in a separate thread 
+                maintenance_thread = threading.Thread(target=run_session_maintenance, args=(driver, SESSION_INTERVAL, username)) 
+                maintenance_thread.daemon = True  # Thread will end when the main thread ends 
                 maintenance_thread.start()
 
                 # Main farming loop
-                while True:
-                    time.sleep(60)  # Pause to prevent CPU overload
+                while True: 
+                    time.sleep(60)  # Pause to prevent CPU overload 
             else:
                 raise Exception("Login failed")
 
@@ -282,10 +289,10 @@ def farm_points(account, proxy):
             logging.error(f"[{username}] Error occurred (Attempt {login_attempts}/{MAX_LOGIN_ATTEMPTS}): {str(e)}")
 
             if login_attempts < MAX_LOGIN_ATTEMPTS:
-                logging.info(f"[{username}] Retrying login in {LOGIN_RETRY_DELAY} seconds...")
-                time.sleep(LOGIN_RETRY_DELAY)
+                logging.info(f"[{username}] Retrying login in {LOGIN_RETRY_DELAY} seconds...") 
+                time.sleep(LOGIN_RETRY_DELAY) 
             else:
-                logging.error(f"[{username}] Max login attempts reached. Giving up.")
+                logging.error(f"[{username}] Max login attempts reached. Giving up.") 
 
         finally:
             if driver:
