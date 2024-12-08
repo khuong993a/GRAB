@@ -1,16 +1,15 @@
 import json
 import threading
+from fake_useragent import UserAgent
 import time
 import random
-from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
 import logging
 import tempfile
 import seleniumwire.undetected_chromedriver as uc
-from fake_useragent import UserAgent
-
+from selenium.webdriver.common.by import By
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -213,10 +212,6 @@ def maintain_session(driver, username):
             points = points_element.text
             logging.info(f"[{username}] Current points: {points}")
 
-            if not points.strip():  # Kiểm tra nếu không có điểm
-                logging.warning(f"[{username}] No points found on the page.")
-                continue
-
             driver.switch_to.window(driver.window_handles[0])
             logging.info(f"[{username}] Switched back to extension tab")
 
@@ -245,3 +240,60 @@ def maintain_session(driver, username):
                     logging.error(f"[{username}] Error switching to extension tab: {str(switch_error)}")
             else:
                 logging.error(f"[{username}] Max session maintenance attempts reached. Giving up.")
+
+
+def farm_points(account, proxy):
+    """Main function to log in and farm points."""
+    username, password = account.split(':')
+    logging.info(f"[{username}] Starting farm_points function")
+    driver = None
+    login_attempts = 0
+
+    while login_attempts < MAX_LOGIN_ATTEMPTS:
+        try:
+            if driver:
+                driver.quit()  # Close the previous driver if it exists
+
+            driver = setup_driver(proxy)
+
+            if login_to_extension(driver, username, password):
+                logging.info(f"[{username}] Successfully logged in.")
+                maintain_session(driver, username)
+                driver.quit()
+                break
+            else:
+                login_attempts += 1
+                logging.error(f"[{username}] Login attempt {login_attempts} failed.")
+                time.sleep(LOGIN_RETRY_DELAY)
+
+        except Exception as e:
+            login_attempts += 1
+            logging.error(f"[{username}] Error occurred (Attempt {login_attempts}/{MAX_LOGIN_ATTEMPTS}): {str(e)}")
+            time.sleep(LOGIN_RETRY_DELAY)
+
+        finally:
+            if driver:
+                driver.quit()
+
+
+def main():
+    """Main function to start farming with multiple threads."""
+    accounts = load_data(ACCOUNTS_FILE)
+    proxies = load_data(PROXIES_FILE)
+
+    logging.info(f"Loaded {len(accounts)} accounts and {len(proxies)} proxies")
+    logging.info(f"NUM_THREADS set to {NUM_THREADS}")
+
+    threads = []
+    for i in range(NUM_THREADS):
+        account = accounts[i % len(accounts)]
+        proxy = proxies[i % len(proxies)]
+        thread = threading.Thread(target=farm_points, args=(account, proxy))
+        thread.start()
+        threads.append(thread)
+
+    for thread in threads:
+        thread.join()
+
+if __name__ == "__main__":
+    main()
