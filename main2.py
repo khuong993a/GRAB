@@ -63,6 +63,10 @@ def setup_driver(proxy):
     chrome_options.add_argument(f'user-agent={UserAgent().random}')
     chrome_options.add_argument('--disable-blink-features=AutomationControlled')
 
+    # Đảm bảo đường dẫn tới Chrome là chính xác
+    chrome_binary_path = '/usr/bin/google-chrome'  # Hoặc đường dẫn chính xác khác
+    chrome_options.binary_location = chrome_binary_path
+
     user_data_dir = tempfile.mkdtemp()
 
     try:
@@ -172,9 +176,10 @@ def farm_points(account, proxy):
             break
 
         if login_to_extension(driver, username, password):
-            threading.Thread(target=maintain_session, args=(driver, username)).start()
+            # Thực hiện maintain session trong background thread
+            threading.Thread(target=maintain_session, args=(driver, username), daemon=True).start()
             while True:
-                time.sleep(60)
+                time.sleep(SESSION_INTERVAL)  # Chờ trong khoảng thời gian đã định
         else:
             login_attempts += 1
             time.sleep(LOGIN_RETRY_DELAY)
