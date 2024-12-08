@@ -212,6 +212,10 @@ def maintain_session(driver, username):
             points = points_element.text
             logging.info(f"[{username}] Current points: {points}")
 
+            if not points.strip():  # Kiểm tra nếu không có điểm
+                logging.warning(f"[{username}] No points found on the page.")
+                continue
+
             driver.switch_to.window(driver.window_handles[0])
             logging.info(f"[{username}] Switched back to extension tab")
 
@@ -268,54 +272,36 @@ def farm_points(account, proxy):
 
                 # Start session maintenance in a separate thread
                 maintenance_thread = threading.Thread(target=run_session_maintenance, args=(driver, SESSION_INTERVAL, username))
-                maintenance_thread.daemon = True  # Thread will end when the main thread ends
+                maintenance_thread.daemon = True
                 maintenance_thread.start()
 
-                # Main farming loop
-                while True:
-                    time.sleep(60)  # Pause to prevent CPU overload
+                # Continue farming points or other tasks here
+                break
             else:
-                raise Exception("Login failed")
-
-        except Exception as e:
-            login_attempts += 1
-            logging.error(f"[{username}] Error occurred (Attempt {login_attempts}/{MAX_LOGIN_ATTEMPTS}): {str(e)}")
-
-            if login_attempts < MAX_LOGIN_ATTEMPTS:
-                logging.info(f"[{username}] Retrying login in {LOGIN_RETRY_DELAY} seconds...")
+                logging.error(f"[{username}] Login failed, retrying...")
+                login_attempts += 1
                 time.sleep(LOGIN_RETRY_DELAY)
-            else:
-                logging.error(f"[{username}] Max login attempts reached. Giving up.")
+        except Exception as e:
+            logging.error(f"[{username}] Unexpected error during farm points (Attempt {login_attempts + 1}/{MAX_LOGIN_ATTEMPTS}): {str(e)}")
+            login_attempts += 1
+            time.sleep(LOGIN_RETRY_DELAY)
 
-        finally:
-            if driver:
-                driver.quit()
+    if driver:
+        driver.quit()
 
-    logging.error(f"[{username}] Failed to farm points after {MAX_LOGIN_ATTEMPTS} attempts.")
-
-
-def main():
-    """Main function to run the farming process.""" 
-    accounts = load_data(ACCOUNTS_FILE) 
-    proxies = load_data(PROXIES_FILE) 
-
-    logging.info(f"Loaded {len(accounts)} accounts and {len(proxies)} proxies") 
-    logging.info(f"NUM_THREADS set to {NUM_THREADS}") 
-
-    threads = [] 
-    for i in range(min(NUM_THREADS, len(accounts), len(proxies))):
-        username = accounts[i].split(':')[0]
-        logging.info(f"Starting thread for account: {username}") 
-        thread = threading.Thread(target=farm_points, args=(accounts[i], proxies[i])) 
-        threads.append(thread) 
-        thread.start()
-
-    logging.info(f"Started {len(threads)} threads")
-
-    for thread in threads:
-        thread.join()
-
-    logging.info("All threads completed")
 
 if __name__ == "__main__":
-    main()
+    # Load accounts and proxies
+    accounts = load_data(ACCOUNTS_FILE)
+    proxies = load_data(PROXIES_FILE)
+
+    # Run threads to farm points
+    threads = []
+    for account, proxy in zip(accounts, proxies):
+        t = threading.Thread(target=farm_points, args=(account, proxy))
+        t.start()
+        threads.append(t)
+
+    # Join threads to wait for all to finish
+    for t in threads:
+        t.join()
